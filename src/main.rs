@@ -52,7 +52,7 @@ fn calculate_damage_done(game: peppi::game::immutable::Game) -> f32 {
                             Some(next_percent.sub(initial_percent))
                         }
                     }
-                    _ => None
+                    _ => None,
                 })
                 .sum::<f32>()
         })
@@ -107,7 +107,11 @@ fn process_slps(slp_paths: Vec<PathBuf>) {
             );
             match fs::rename(&f, new_path) {
                 Ok(_) => (),
-                Err(err) => println!("failed to move friendlies match: file={} err={}", f.display(), err),
+                Err(err) => println!(
+                    "failed to move friendlies match: file={} err={}",
+                    f.display(),
+                    err
+                ),
             }
             continue;
         }

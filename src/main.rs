@@ -129,3 +129,62 @@ fn main() {
     stdout.flush().unwrap();
     stdin().read(&mut [0]).unwrap();
 }
+
+#[cfg(test)]
+mod tests {
+    use peppi::game::immutable::Game;
+    use peppi::io::slippi::read;
+    use std::path::PathBuf;
+    use std::{fs, io};
+
+    use crate::{calculate_damage_done, game_has_cpu_player, get_all_slps_paths};
+
+    fn get_game(slp_path: &str) -> Game {
+        let f = PathBuf::from(slp_path);
+        let mut r = io::BufReader::new(fs::File::open(&f).unwrap());
+        let game = match read(&mut r, None) {
+            Ok(game) => game,
+            Err(err) => {
+                panic!("failed to read game: {} [{}]", f.display(), err);
+            }
+        };
+        return game;
+    }
+
+    #[test]
+    fn test_get_slp_paths() {
+        let slp_paths = get_all_slps_paths(Some("./test_slps".to_string()));
+        assert_eq!(slp_paths.is_empty(), false);
+        assert_eq!(slp_paths.len(), 3);
+    }
+
+    #[test]
+    fn test_cpu_game() {
+        let game = get_game("./test_slps/cpu.slp");
+
+        let is_cpu_game = game_has_cpu_player(&game);
+        assert!(is_cpu_game);
+    }
+
+    #[test]
+    fn test_damage_done_one_player() {
+        let game = get_game("./test_slps/handwarmer1.slp");
+
+        let is_cpu_game = game_has_cpu_player(&game);
+        assert_eq!(is_cpu_game, false);
+
+        let damage_done = calculate_damage_done(game);
+        assert_eq!(damage_done, 5.73);
+    }
+
+    #[test]
+    fn test_damage_done_two_players() {
+        let game = get_game("./test_slps/handwarmer2.slp");
+
+        let is_cpu_game = game_has_cpu_player(&game);
+        assert_eq!(is_cpu_game, false);
+
+        let damage_done = calculate_damage_done(game);
+        assert_eq!(damage_done, 92.479996);
+    }
+}

@@ -1,0 +1,77 @@
+name: Format and Test
+
+on:
+  push:
+    branches:
+        - "**"
+    paths-ignore:
+        - "**.md"
+  pull_request:
+    branches:
+      - "**"
+    paths-ignore:
+      - "**.md"
+
+jobs:
+  cargo_fmt:
+    name: Cargo Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt
+      - name: Rustfmt Check
+        uses: actions-rust-lang/rustfmt@v1
+
+  cargo_test_and_build:
+    name: Cargo Build and Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        include:
+          - os: ubuntu-latest
+            artifact_name: "ubuntu_slp-archive-cleaner"
+          - os: windows-latest
+            artifact_name: "windows_slp-archive-cleaner"
+          - os: macOS-latest
+            artifact_name: "macOS_slp-archive-cleaner"
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v5
+      - name: 'Fetch Git Tags'
+        shell: bash
+        run: |
+          git fetch --prune --unshallow
+          echo "GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
+          echo "GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+          echo "CURR_DATE=$(date +%Y-%m-%d)" >> $GITHUB_ENV
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt
+      - name: "Run cargo build and test"
+        run: |
+          cargo build --release
+          cargo test --all --all-features --release
+      - name: "Package on macOS and ubuntu"
+        if: matrix.os != 'windows-latest'
+        working-directory: ${{ github.workspace }}
+        run: |
+          mkdir artifact
+          FILE_NAME="${{ env.CURR_DATE }}-${{ env.GIT_HASH }}-${{ env.GIT_TAG }}-${{ matrix.artifact_name }}"
+          mv ./target/release/slp-archive-cleaner ./artifact/$FILE_NAME
+      - name: "Package on Windows"
+        if: matrix.os == 'windows-latest'
+        working-directory: ${{ github.workspace }}
+        run: |
+          mkdir artifact
+          $FILE_NAME="${{ env.CURR_DATE }}-${{ env.GIT_HASH }}-${{ env.GIT_TAG }}-${{ matrix.artifact_name }}.exe"
+          move .\target\release\slp-archive-cleaner.exe .\artifact\$FILE_NAME
+      - name: "Publish"
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: "./artifact/"

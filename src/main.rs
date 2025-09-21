@@ -59,6 +59,13 @@ fn calculate_damage_done(game: peppi::game::immutable::Game) -> f32 {
         .sum::<f32>()
 }
 
+fn game_has_cpu_player(game: &peppi::game::immutable::Game) -> bool {
+    game.start
+        .players
+        .iter()
+        .any(|f| f.r#type == PlayerType::Cpu)
+}
+
 fn process_slps(slp_paths: Vec<PathBuf>) {
     for f in slp_paths {
         let mut r = io::BufReader::new(fs::File::open(&f).unwrap());
@@ -71,12 +78,7 @@ fn process_slps(slp_paths: Vec<PathBuf>) {
         };
 
         // cpu check
-        if game
-            .start
-            .players
-            .iter()
-            .any(|f| f.r#type == PlayerType::Cpu)
-        {
+        if game_has_cpu_player(&game) {
             let _ = fs::create_dir_all(CPU_OUTPUT_FOLDER_NAME);
             println!("{}: cpu_match", f.display());
             let mut old_path = PathBuf::new();
